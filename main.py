@@ -555,20 +555,15 @@ if __name__ == "__main__":
     
     if use_ssl:
         # 构建证书路径
-        if settings.DOMAIN:
-            cert_dir = f"{settings.SSL_CERT_PATH}/{settings.DOMAIN}"
-            ssl_certfile = f"{cert_dir}/fullchain.pem"
-            ssl_keyfile = f"{cert_dir}/privkey.pem"
-            
-            # 检查证书文件是否存在
-            if not (os.path.exists(ssl_certfile) and os.path.exists(ssl_keyfile)):
-                print(f"❌ SSL证书文件不存在:")
-                print(f"   证书: {ssl_certfile}")
-                print(f"   密钥: {ssl_keyfile}")
-                print(f"💡 请先运行SSL配置脚本: sudo ./scripts/setup_ssl.sh")
-                sys.exit(1)
-        else:
-            print(f"❌ 启用HTTPS需要设置DOMAIN环境变量")
+        ssl_certfile = f"{settings.SSL_CERT_PATH}/fullchain.pem"
+        ssl_keyfile = f"{settings.SSL_CERT_PATH}/privkey.pem"
+        
+        # 检查证书文件是否存在
+        if not (os.path.exists(ssl_certfile) and os.path.exists(ssl_keyfile)):
+            print(f"❌ SSL证书文件不存在:")
+            print(f"   证书: {ssl_certfile}")
+            print(f"   密钥: {ssl_keyfile}")
+            print(f"💡 请先运行: ./scripts/generate_cert.sh")
             sys.exit(1)
     
     # 显示启动信息

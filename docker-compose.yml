@@ -1,50 +1,74 @@
 version: '3.8'
 
 services:
-  api-management:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    container_name: api-management
-    ports:
-      - "${PORT:-8080}:8080"
+  # API服务
+  api:
+    build: .
     environment:
-      # 数据库配置
-      - SUPABASE_URL=${SUPABASE_URL}
-      
-      # 认证配置
-      - SECRET_KEY=${SECRET_KEY}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      
-      # 应用配置
-      - HOST=0.0.0.0
-      - PORT=8080
-      - DEBUG=${DEBUG:-false}
-    
-    restart: unless-stopped
-    
+      # 数据库配置（可选，默认使用env设置的外部数据库）
+      SUPABASE_URL: ${SUPABASE_URL}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      HOST: 0.0.0.0
+      PORT: 8080
+      DEBUG: ${DEBUG:-false}
+      # SSL配置
+      DOMAIN: ${DOMAIN:-localhost}
+      ENABLE_HTTPS: ${ENABLE_HTTPS:-false}
+      SSL_CERT_PATH: /app/ssl
+    volumes:
+      - ./app.log:/app/app.log
+      - ${HOME}/.ssl:/app/ssl:ro  # 只读挂载SSL证书
+    networks:
+      - api-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    
-    # 挂载日志目录（可选）
+
+  # nginx反向代理
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./logs:/app/logs
-    
-    # 网络配置
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${HOME}/.ssl:/etc/nginx/ssl:ro  # SSL证书
+    depends_on:
+      - api
     networks:
       - api-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-# 创建自定义网络
+  # PostgreSQL数据库（可选）
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-api_management}
+      POSTGRES_USER: ${POSTGRES_USER:-api_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-api_user}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - with-db  # 使用profile控制是否启动数据库
+
+volumes:
+  postgres_data:
+
 networks:
   api-network:
-    driver: bridge
-
-# 可选：添加数据卷用于持久化数据
-volumes:
-  api-logs:
-    driver: local 
+    driver: bridge 
