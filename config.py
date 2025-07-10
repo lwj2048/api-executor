@@ -1,5 +1,9 @@
 import os
 from functools import lru_cache
+from dotenv import load_dotenv
+
+# 加载.env文件
+load_dotenv()
 
 class Settings:
     # 数据库配置 - 从环境变量读取
