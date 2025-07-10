@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  api-management:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-management
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      # 数据库配置
+      - SUPABASE_URL=${SUPABASE_URL}
+      
+      # 认证配置
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      
+      # 应用配置
+      - HOST=0.0.0.0
+      - PORT=8080
+      - DEBUG=${DEBUG:-false}
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 挂载日志目录（可选）
+    volumes:
+      - ./logs:/app/logs
+    
+    # 网络配置
+    networks:
+      - api-network
+
+# 创建自定义网络
+networks:
+  api-network:
+    driver: bridge
+
+# 可选：添加数据卷用于持久化数据
+volumes:
+  api-logs:
+    driver: local 

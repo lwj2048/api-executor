@@ -1,0 +1,6 @@
+name=简单测试
+description=测试单行命令
+endpoint_path=/test-simple  
+action_type=shell
+action_content=echo "Hello {name}, current time: $(date)"
+parameters={"name": "用户名"}

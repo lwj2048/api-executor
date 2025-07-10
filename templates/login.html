@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - {{ app_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 20px 20px 0 0;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .login-body {
+            padding: 2rem;
+        }
+        .form-floating input {
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+        }
+        .form-floating input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-login {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        .system-info {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <h3 class="mb-0">
+                <i class="bi bi-shield-lock me-2"></i>
+                {{ app_name }}
+            </h3>
+            <p class="mb-0 mt-2 opacity-75">管理员登录</p>
+        </div>
+        
+        <div class="login-body">
+            <div id="error-alert" class="alert alert-danger d-none" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <span id="error-message"></span>
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="username" name="username" 
+                           placeholder="用户名" required autocomplete="username">
+                    <label for="username">
+                        <i class="bi bi-person me-2"></i>用户名
+                    </label>
+                </div>
+                
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="password" name="password" 
+                           placeholder="密码" required autocomplete="current-password">
+                    <label for="password">
+                        <i class="bi bi-key me-2"></i>密码
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login w-100" id="loginBtn">
+                    <span class="login-text">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>
+                        登录
+                    </span>
+                    <span class="loading-text d-none">
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        登录中...
+                    </span>
+                </button>
+            </form>
+            
+            <div class="system-info">
+                <h6 class="mb-2">
+                    <i class="bi bi-info-circle me-2"></i>
+                    系统信息
+                </h6>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>
+                        会话有效期: 15分钟
+                    </small>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check me-1"></i>
+                        请使用管理员账户登录
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loginBtn = document.getElementById('loginBtn');
+            const loginText = loginBtn.querySelector('.login-text');
+            const loadingText = loginBtn.querySelector('.loading-text');
+            const errorAlert = document.getElementById('error-alert');
+            const errorMessage = document.getElementById('error-message');
+            
+            // 显示加载状态
+            loginBtn.disabled = true;
+            loginText.classList.add('d-none');
+            loadingText.classList.remove('d-none');
+            errorAlert.classList.add('d-none');
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    // 登录成功，跳转到主页
+                    window.location.href = '/';
+                } else {
+                    throw new Error(result.detail || result.message || '登录失败');
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                
+                // 显示错误信息
+                errorMessage.textContent = error.message;
+                errorAlert.classList.remove('d-none');
+                
+                // 恢复按钮状态
+                loginBtn.disabled = false;
+                loginText.classList.remove('d-none');
+                loadingText.classList.add('d-none');
+                
+                // 聚焦密码输入框
+                document.getElementById('password').focus();
+                document.getElementById('password').select();
+            }
+        });
+
+        // 自动聚焦用户名输入框
+        document.getElementById('username').focus();
+        
+        // 回车键快速登录
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html> 

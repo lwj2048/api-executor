@@ -1,0 +1,80 @@
+{
+  "examples": [
+    {
+      "name": "系统状态检查",
+      "description": "检查服务器的基本状态信息",
+      "endpoint_path": "/system-status",
+      "action_type": "shell",
+      "action_content": "echo '=== 系统状态 ==='\ndate\nuptime\necho '\\n=== 磁盘使用 ==='\ndf -h\necho '\\n=== 内存使用 ==='\nfree -m\necho '\\n=== CPU占用TOP5 ==='\nps aux --sort=-%cpu | head -6",
+      "parameters": {}
+    },
+    {
+      "name": "发送Webhook通知",
+      "description": "向Slack或其他webhook服务发送通知",
+      "endpoint_path": "/send-notification",
+      "action_type": "webhook",
+      "action_content": "{\n  \"url\": \"https://hooks.slack.com/services/YOUR/WEBHOOK/URL\",\n  \"payload\": {\n    \"text\": \"📢 通知: {message}\",\n    \"username\": \"API机器人\",\n    \"icon_emoji\": \":robot_face:\",\n    \"attachments\": [\n      {\n        \"color\": \"{color}\",\n        \"fields\": [\n          {\"title\": \"发送者\", \"value\": \"{sender}\", \"short\": true},\n          {\"title\": \"时间\", \"value\": \"{timestamp}\", \"short\": true}\n        ]\n      }\n    ]\n  }\n}",
+      "parameters": {
+        "message": "通知消息内容",
+        "color": "颜色(good/warning/danger)",
+        "sender": "发送者名称",
+        "timestamp": "时间戳"
+      }
+    },
+    {
+      "name": "Git自动部署",
+      "description": "自动拉取代码并重启服务",
+      "endpoint_path": "/deploy",
+      "action_type": "shell",
+      "action_content": "echo '开始部署 {project}...'\ncd {project_path}\necho '拉取最新代码...'\ngit pull origin {branch}\necho '安装依赖...'\nnpm install\necho '构建项目...'\nnpm run build\necho '重启服务...'\npm2 restart {service_name}\necho '部署完成！'",
+      "parameters": {
+        "project": "项目名称",
+        "project_path": "项目路径",
+        "branch": "Git分支",
+        "service_name": "PM2服务名"
+      }
+    },
+    {
+      "name": "HTTP健康检查",
+      "description": "检查指定URL的健康状态",
+      "endpoint_path": "/health-check",
+      "action_type": "http",
+      "action_content": "{\n  \"url\": \"{target_url}\",\n  \"method\": \"GET\",\n  \"headers\": {\n    \"User-Agent\": \"API-Health-Checker/1.0\"\n  },\n  \"timeout\": 10\n}",
+      "parameters": {
+        "target_url": "要检查的URL地址"
+      }
+    },
+    {
+      "name": "Python数据处理",
+      "description": "执行Python脚本进行数据处理",
+      "endpoint_path": "/process-data",
+      "action_type": "python",
+      "action_content": "import json\nimport datetime\n\nprint(f'开始处理数据: {data_type}')\n\n# 模拟数据处理\nresult = {\n    'processed_at': datetime.datetime.now().isoformat(),\n    'data_type': data_type,\n    'status': 'success',\n    'record_count': int(record_count) if 'record_count' in locals() else 0\n}\n\nprint(json.dumps(result, indent=2, ensure_ascii=False))\nprint(f'数据处理完成，共处理 {result[\"record_count\"]} 条记录')",
+      "parameters": {
+        "data_type": "数据类型",
+        "record_count": "记录数量"
+      }
+    },
+    {
+      "name": "文件备份",
+      "description": "备份指定目录到备份位置",
+      "endpoint_path": "/backup",
+      "action_type": "shell",
+      "action_content": "echo '开始备份: {source_path}'\nBACKUP_NAME=\"backup_$(date +%Y%m%d_%H%M%S)\"\necho \"备份名称: $BACKUP_NAME\"\ntar -czf \"{backup_path}/$BACKUP_NAME.tar.gz\" -C \"{source_path}\" .\necho \"备份完成: {backup_path}/$BACKUP_NAME.tar.gz\"\nls -lh \"{backup_path}/$BACKUP_NAME.tar.gz\"",
+      "parameters": {
+        "source_path": "源目录路径",
+        "backup_path": "备份存储路径"
+      }
+    },
+    {
+      "name": "数据库查询",
+      "description": "执行数据库查询并返回结果",
+      "endpoint_path": "/db-query",
+      "action_type": "python",
+      "action_content": "import psycopg2\nimport json\nfrom datetime import datetime\n\ntry:\n    # 连接数据库\n    conn = psycopg2.connect(\n        host='your-db-host',\n        database='your-database',\n        user='your-user',\n        password='your-password'\n    )\n    \n    cursor = conn.cursor()\n    \n    # 执行查询\n    query = query_sql if 'query_sql' in locals() else 'SELECT version()'\n    cursor.execute(query)\n    \n    # 获取结果\n    results = cursor.fetchall()\n    \n    output = {\n        'success': True,\n        'query': query,\n        'result_count': len(results),\n        'results': [str(row) for row in results[:10]],  # 只显示前10条\n        'executed_at': datetime.now().isoformat()\n    }\n    \n    print(json.dumps(output, indent=2, ensure_ascii=False))\n    \nexcept Exception as e:\n    error_output = {\n        'success': False,\n        'error': str(e),\n        'executed_at': datetime.now().isoformat()\n    }\n    print(json.dumps(error_output, indent=2, ensure_ascii=False))\n    \nfinally:\n    if 'conn' in locals():\n        conn.close()",
+      "parameters": {
+        "query_sql": "要执行的SQL查询语句"
+      }
+    }
+  ]
+} 

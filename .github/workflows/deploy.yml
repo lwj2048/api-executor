@@ -1,0 +1,117 @@
+name: Deploy API Management System
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run basic health check
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        DEBUG: false
+      run: |
+        # 基础语法检查
+        python -m py_compile main.py
+        python -m py_compile config.py
+        python -m py_compile auth.py
+        python -m py_compile database.py
+        echo "✅ 语法检查通过"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Deploy to production server
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        HOST: ${{ secrets.HOST || '0.0.0.0' }}
+        PORT: ${{ secrets.PORT || '8080' }}
+        DEBUG: false
+      run: |
+        echo "🚀 开始部署..."
+        echo "✅ 环境变量已设置"
+        echo "📡 目标地址: $HOST:$PORT"
+        
+        # 这里添加你的部署脚本
+        # 例如：
+        # - 部署到云服务器
+        # - 构建Docker镜像
+        # - 部署到Kubernetes
+        # - 等等
+        
+        echo "✅ 部署完成！"
+
+  # 可选：部署到Docker
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+      
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/api-management:latest
+        build-args: |
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} 
