@@ -198,6 +198,113 @@ docker run -d \
   -e SECRET_KEY="your-secret-key" \
   -e ADMIN_USERNAME="admin" \
   -e ADMIN_PASSWORD="your-password" \
+```
+
+### 🔐 HTTPS/SSL配置（生产环境推荐）
+
+#### 🚀 一键SSL部署（推荐）
+
+```bash
+# 方式一：用户目录SSL配置（推荐，无需root权限）
+./scripts/setup_ssl_user.sh
+
+# 方式二：传统SSL配置（需要root权限）
+sudo ./scripts/setup_ssl.sh
+
+# 方式三：简化配置向导
+./deploy_ssl.sh
+```
+
+#### 🏗️ 手动配置SSL
+
+##### 1. 准备域名环境变量
+```bash
+# 编辑.env文件，添加域名配置
+cp env.example .env
+vim .env
+
+# 必需的SSL配置
+DOMAIN=api.test.dpdns.org          # 您的域名
+CERT_EMAIL=admin@example.com       # Let's Encrypt邮箱
+ENABLE_HTTPS=true                  # 启用HTTPS
+SSL_CERT_PATH=~/.ssl/letsencrypt/live  # 证书路径（用户目录，无需root权限）
+```
+
+##### 2. 使用Docker Compose生产部署
+```bash
+# 启动包含SSL的完整服务栈
+docker-compose -f docker-compose.prod.yml up -d
+
+# 查看服务状态
+docker-compose -f docker-compose.prod.yml ps
+
+# 查看证书申请日志
+docker-compose -f docker-compose.prod.yml logs certbot
+```
+
+##### 3. 传统服务器SSL配置
+```bash
+# 运行完整SSL配置脚本（需要root权限）
+sudo ./scripts/setup_ssl.sh
+```
+
+#### 🔧 SSL功能特点
+
+- **🔄 自动证书申请** - 使用Let's Encrypt免费SSL证书
+- **📱 自动续期** - 证书90天有效期，自动续期
+- **🛡️ 安全配置** - TLS 1.2/1.3，HSTS，安全头部
+- **🚀 nginx反向代理** - 高性能Web服务器处理HTTPS
+- **🐳 容器化部署** - 完整的Docker Compose配置
+- **📊 健康检查** - 自动监控服务状态
+- **🏠 用户目录存储** - 证书存储在用户目录，无需root权限
+- **📁 便于备份** - 用户目录便于迁移和备份证书
+
+#### 🌐 支持的域名示例
+
+- `api.test.dpdns.org`
+- `test.dpdns.org`
+- `your-domain.com`
+- `api.your-domain.com`
+
+#### 🔍 SSL故障排除
+
+```bash
+# 检查证书状态（用户目录）
+ls -la ~/.ssl/letsencrypt/live/
+# 或在Docker中检查
+docker-compose -f docker-compose.prod.yml exec nginx \
+  ls -la /home/ssl/letsencrypt/live/
+
+# 手动申请证书
+docker-compose -f docker-compose.prod.yml run --rm \
+  certbot certonly --webroot -w /var/www/html -d your-domain.com
+
+# 测试证书更新
+docker-compose -f docker-compose.prod.yml exec certbot-renewal \
+  certbot renew --dry-run
+
+# 检查nginx配置
+docker-compose -f docker-compose.prod.yml exec nginx nginx -t
+```
+
+#### 📋 SSL部署前检查清单
+
+- [ ] 域名DNS已指向服务器IP
+- [ ] 防火墙开放80和443端口
+- [ ] 域名可以通过HTTP访问
+- [ ] .env文件配置正确
+- [ ] Docker和Docker Compose已安装
+
+#### ⚡ 本地开发（HTTP模式）
+
+本地开发时无需SSL证书：
+
+```bash
+# 本地HTTP模式（默认）
+./start.sh 8080
+
+# 或使用Docker开发模式
+docker-compose up -d
   api-management
 ```
 

@@ -127,4 +127,22 @@ dmypy.json
 # 本地配置文件
 # ===================================
 local_settings.py
-local_config.py 
+local_config.py
+
+# ===================================
+# SSL证书和nginx配置
+# ===================================
+nginx/logs/
+nginx/html/index.html
+cert-data/
+letsencrypt/
+ssl-certs/
+.ssl/
+*.pem
+*.crt
+*.key
+
+# ===================================
+# Docker volumes
+# ===================================
+postgres_data/ 

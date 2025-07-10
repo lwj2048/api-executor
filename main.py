@@ -536,24 +536,71 @@ if __name__ == "__main__":
     # 命令行参数解析
     parser = argparse.ArgumentParser(description='API定义管理系统')
     parser.add_argument('--port', '-p', type=int, 
-                       default=int(os.environ.get('API_PORT', 9000)),
-                       help='服务端口号 (默认: 9000, 可通过环境变量 API_PORT 设置)')
+                       default=settings.PORT,
+                       help=f'服务端口号 (默认: {settings.PORT})')
     parser.add_argument('--host', type=str, 
-                       default=os.environ.get('API_HOST', '0.0.0.0'),
-                       help='服务主机地址 (默认: 0.0.0.0)')
+                       default=settings.HOST,
+                       help=f'服务主机地址 (默认: {settings.HOST})')
     parser.add_argument('--reload', action='store_true',
                        help='启用自动重载 (开发模式)')
+    parser.add_argument('--ssl', action='store_true',
+                       help='启用HTTPS/SSL (需要证书)')
     
     args = parser.parse_args()
     
+    # 检查HTTPS配置
+    use_ssl = args.ssl or settings.ENABLE_HTTPS
+    ssl_keyfile = None
+    ssl_certfile = None
+    
+    if use_ssl:
+        # 构建证书路径
+        if settings.DOMAIN:
+            cert_dir = f"{settings.SSL_CERT_PATH}/{settings.DOMAIN}"
+            ssl_certfile = f"{cert_dir}/fullchain.pem"
+            ssl_keyfile = f"{cert_dir}/privkey.pem"
+            
+            # 检查证书文件是否存在
+            if not (os.path.exists(ssl_certfile) and os.path.exists(ssl_keyfile)):
+                print(f"❌ SSL证书文件不存在:")
+                print(f"   证书: {ssl_certfile}")
+                print(f"   密钥: {ssl_keyfile}")
+                print(f"💡 请先运行SSL配置脚本: sudo ./scripts/setup_ssl.sh")
+                sys.exit(1)
+        else:
+            print(f"❌ 启用HTTPS需要设置DOMAIN环境变量")
+            sys.exit(1)
+    
+    # 显示启动信息
+    protocol = "https" if use_ssl else "http"
+    domain_info = f" ({settings.DOMAIN})" if settings.DOMAIN else ""
+    
     print(f"🚀 启动API定义管理系统...")
-    print(f"📡 监听地址: http://{args.host}:{args.port}")
+    print(f"📡 监听地址: {protocol}://{args.host}:{args.port}{domain_info}")
     print(f"🔄 自动重载: {'启用' if args.reload else '禁用'}")
+    print(f"🔐 HTTPS: {'启用' if use_ssl else '禁用'}")
+    if use_ssl:
+        print(f"📜 证书路径: {ssl_certfile}")
     print("=" * 50)
+    
+    # 启动服务
+    uvicorn_config = {
+        "host": args.host,
+        "port": args.port,
+        "reload": args.reload
+    }
+    
+    # 添加SSL配置
+    if use_ssl:
+        uvicorn_config.update({
+            "ssl_keyfile": ssl_keyfile,
+            "ssl_certfile": ssl_certfile,
+            "ssl_version": 3,  # TLS 1.2+
+        })
     
     if args.reload:
         # 使用reload时需要传递模块字符串
-        uvicorn.run("main:app", host=args.host, port=args.port, reload=True)
+        uvicorn.run("main:app", **uvicorn_config)
     else:
         # 不使用reload时可以直接传递app对象
-        uvicorn.run(app, host=args.host, port=args.port, reload=False) 
+        uvicorn.run(app, **uvicorn_config) 

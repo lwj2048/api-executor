@@ -32,6 +32,14 @@ class Settings:
     # 服务器配置
     HOST = os.getenv("HOST", "0.0.0.0")
     PORT = int(os.getenv("PORT", "8080"))
+    
+    # SSL/HTTPS配置
+    DOMAIN = os.getenv("DOMAIN", "")  # 域名，如: api.test.dpdns.org
+    ENABLE_HTTPS = os.getenv("ENABLE_HTTPS", "false").lower() == "true"
+    # SSL证书路径 - 默认使用用户家目录，避免需要root权限
+    HOME_DIR = os.path.expanduser("~")
+    SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", f"{HOME_DIR}/.ssl/letsencrypt/live")
+    CERT_EMAIL = os.getenv("CERT_EMAIL", "admin@example.com")  # Let's Encrypt邮箱
 
 @lru_cache()
 def get_settings():
