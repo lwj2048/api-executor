@@ -49,15 +49,21 @@ case "$MODE" in
     "https")
         print_info "HTTPS模式启动"
         
-        # 检查SSL证书
+        # 处理证书路径 - 与config.py保持一致
         CERT_PATH=${SSL_CERT_PATH:-$HOME/.ssl}
+        if [[ "$CERT_PATH" =~ ^~ ]]; then
+            CERT_PATH="${CERT_PATH/#\~/$HOME}"
+        fi
+        
         if [[ ! -f "$CERT_PATH/fullchain.pem" ]] || [[ ! -f "$CERT_PATH/privkey.pem" ]]; then
             print_warning "SSL证书不存在，正在生成..."
             ./scripts/generate_cert.sh
         fi
         
         export ENABLE_HTTPS=true
+        export SSL_CERT_PATH="$CERT_PATH"
         SERVICES="api nginx"
+        print_info "证书路径: $CERT_PATH"
         ;;
         
     "with-db")

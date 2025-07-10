@@ -13,9 +13,25 @@ NC='\033[0m'
 print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
 print_success() { echo -e "${GREEN}✅ $1${NC}"; }
 
+# 加载环境变量（如果存在.env文件）
+if [[ -f ".env" ]]; then
+    source .env 2>/dev/null || true
+fi
+
 # 读取配置
 DOMAIN=${DOMAIN:-localhost}
-CERT_DIR="$HOME/.ssl"
+
+# 处理证书路径 - 与config.py保持一致
+if [[ -n "$SSL_CERT_PATH" ]]; then
+    # 展开~路径
+    if [[ "$SSL_CERT_PATH" =~ ^~ ]]; then
+        CERT_DIR="${SSL_CERT_PATH/#\~/$HOME}"
+    else
+        CERT_DIR="$SSL_CERT_PATH"
+    fi
+else
+    CERT_DIR="$HOME/.ssl"
+fi
 
 print_info "生成自签名SSL证书..."
 print_info "域名: $DOMAIN"

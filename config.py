@@ -36,8 +36,9 @@ class Settings:
     # SSL/HTTPS配置
     DOMAIN = os.getenv("DOMAIN", "localhost")
     ENABLE_HTTPS = os.getenv("ENABLE_HTTPS", "false").lower() == "true"
-    # 证书路径 - 统一使用用户目录
-    SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", os.path.expanduser("~/.ssl"))
+    # 证书路径 - 统一使用用户目录，处理~路径展开
+    _ssl_path = os.getenv("SSL_CERT_PATH", "~/.ssl")
+    SSL_CERT_PATH = os.path.expanduser(_ssl_path) if _ssl_path.startswith("~") else _ssl_path
 
 @lru_cache()
 def get_settings():
