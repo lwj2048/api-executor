@@ -16,38 +16,54 @@ from executor import APIExecutor
 from config import settings
 from auth import AuthManager, get_current_user, get_current_user_optional
 import asyncio
-
-# 创建FastAPI应用
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    description="强大的API定义和远程执行系统"
-)
-
-# 创建数据库表
-create_tables()
+from contextlib import asynccontextmanager
 
 # 定时清理过期会话 (使用asyncio后台任务)
 async def cleanup_sessions_task():
     """异步定时清理过期会话"""
-    while True:
-        try:
-            await asyncio.sleep(300)  # 等待5分钟
+    try:
+        # 首次延迟启动，给服务器时间完全启动
+        await asyncio.sleep(30)  # 等待30秒后开始第一次清理
+        while True:
             AuthManager.cleanup_expired_sessions()
             print("✓ 已清理过期会话")
-        except asyncio.CancelledError:
-            print("✓ 会话清理任务已停止")
-            break
-        except Exception as e:
-            print(f"✗ 清理会话失败: {e}")
+            await asyncio.sleep(300)  # 每5分钟清理一次
+    except asyncio.CancelledError:
+        print("✓ 会话清理任务已停止")
+        raise
+    except Exception as e:
+        print(f"✗ 清理会话失败: {e}")
 
-# FastAPI生命周期事件
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时的初始化任务"""
+# FastAPI生命周期事件 (使用新的lifespan方式)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时执行
     print("🔄 启动会话清理任务...")
-    # 创建后台任务，5分钟后开始第一次清理
-    asyncio.create_task(cleanup_sessions_task())
+    cleanup_task = asyncio.create_task(cleanup_sessions_task())
+    
+    try:
+        yield
+    finally:
+        # 关闭时执行
+        print("🛑 停止会话清理任务...")
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
+        print("✅ 应用已完全关闭")
+
+# 创建FastAPI应用 (使用新的lifespan管理)
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    description="强大的API定义和远程执行系统",
+    lifespan=lifespan
+)
+
+# 创建数据库表
+create_tables()
 
 # 模板设置
 templates = Jinja2Templates(directory="templates")
@@ -532,6 +548,15 @@ async def toggle_api_logging(
 
 if __name__ == "__main__":
     import uvicorn
+    import signal
+    
+    # 信号处理，确保正确关闭
+    def signal_handler(signum, frame):
+        print(f"\n🛑 收到信号 {signum}，正在优雅关闭...")
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     # 命令行参数解析
     parser = argparse.ArgumentParser(description='API定义管理系统')
