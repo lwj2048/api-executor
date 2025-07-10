@@ -16,7 +16,6 @@ from executor import APIExecutor
 from config import settings
 from auth import AuthManager, get_current_user, get_current_user_optional
 import asyncio
-from threading import Timer
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -28,20 +27,27 @@ app = FastAPI(
 # 创建数据库表
 create_tables()
 
-# 定时清理过期会话
-def cleanup_sessions():
-    """定时清理过期会话"""
-    try:
-        AuthManager.cleanup_expired_sessions()
-        print("✓ 已清理过期会话")
-    except Exception as e:
-        print(f"✗ 清理会话失败: {e}")
-    
-    # 设置下一次清理（每5分钟）
-    Timer(300, cleanup_sessions).start()
+# 定时清理过期会话 (使用asyncio后台任务)
+async def cleanup_sessions_task():
+    """异步定时清理过期会话"""
+    while True:
+        try:
+            await asyncio.sleep(300)  # 等待5分钟
+            AuthManager.cleanup_expired_sessions()
+            print("✓ 已清理过期会话")
+        except asyncio.CancelledError:
+            print("✓ 会话清理任务已停止")
+            break
+        except Exception as e:
+            print(f"✗ 清理会话失败: {e}")
 
-# 启动时开始清理任务
-Timer(300, cleanup_sessions).start()  # 5分钟后开始第一次清理
+# FastAPI生命周期事件
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时的初始化任务"""
+    print("🔄 启动会话清理任务...")
+    # 创建后台任务，5分钟后开始第一次清理
+    asyncio.create_task(cleanup_sessions_task())
 
 # 模板设置
 templates = Jinja2Templates(directory="templates")
