@@ -125,12 +125,7 @@ jobs:
                 assert login_result["success"] is True
                 
                 # 获取session cookie
-                session_cookie = None
-                for cookie in response.cookies:
-                    if cookie.name == "session_id":
-                        session_cookie = cookie.value
-                        break
-                
+                session_cookie = response.cookies.get("session_id")
                 assert session_cookie is not None
                 print("✅ 用户登录成功")
 
